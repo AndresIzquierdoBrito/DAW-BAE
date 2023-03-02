@@ -4,7 +4,16 @@ go
 --1.- Cadena con mayor audiencia (en la tabla Audiencia) el 15/5/2013 en el Periodo 'Noche1 (20.30 a
 --24.00)'
 
-
+SELECT TOP 1 Cadena, a.Valor
+FROM Cadena AS c
+INNER JOIN AudienciaPrograma AS ap
+ON c.idCadena = ap.IdCadena
+INNER JOIN Audiencia AS a
+ON c.idCadena = a.IdCadena
+INNER JOIN Periodo AS p
+ON a.idPeriodo = p.Id
+WHERE CAST(ap.FechaHora AS DATE) = '2013-5-15' AND p.Periodo LIKE 'Noche1%'
+ORDER BY a.Valor DESC;
 
 --2.- Programa de TELECINCO con más espectadores los jueves (en audienciaprograma)
 
