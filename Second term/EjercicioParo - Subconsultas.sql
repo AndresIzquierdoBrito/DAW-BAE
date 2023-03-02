@@ -89,7 +89,7 @@ GROUP BY Vista.CA
 ORDER BY DivisionParoPorPadron DESC
 go
 --7.- (SUBCONSULTAS)Dar los nombres de los municipios de la Comunidad autónoma con mayor paro en
---agricultura (en febrero de 2013).
+--agricultura (en febrero de 2013).!!!!!!!!
 SELECT m.municipio
 FROM   municipios AS m
        INNER JOIN provincias AS p
@@ -102,7 +102,7 @@ WHERE  p.CodCA = (SELECT TOP 1 WITH ties ca.CodCA
                     ON m.codprovincia = p.codprovincia
                     INNER JOIN comunidadesautonomas AS ca
                     ON p.codca = ca.codca
-			 WHERE MONTH(pm.Fecha) = 2
+			 WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013
              GROUP  BY ca.CodCA
              ORDER  BY SUM(pm.paroagricultura) DESC);
 go
@@ -130,24 +130,60 @@ SELECT m.Municipio, pa.Padron,(SELECT pm.ParoServicios
 	FROM ParoMes AS pm
 	WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013 AND pm.CodMunicipio = m.CodMunicipio) / pa.Padron
 
-
 FROM Municipios AS m
 	INNER JOIN Padron AS pa
 	ON m.CodMunicipio = pa.CodMunicipio
 	WHERE (SELECT pm.ParoServicios
 	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013 AND pm.CodMunicipio = m.CodMunicipio) > AVG((SELECT pm.ParoServicios
+	WHERE MONTH(pm.Fecha) = 2 AND pm.CodMunicipio = m.CodMunicipio) > AVG((SELECT pm.ParoServicios
 	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013 AND pm.CodMunicipio = m.CodMunicipio))
+	WHERE MONTH(pm.Fecha) = 2AND pm.CodMunicipio = m.CodMunicipio))
 
 	
-
 --10.- Indicar para cada Comunidad Autónoma el nº de habitantes por municipio
 --(padrón dividido entre número de municipios), ordenándolas de menor a mayor
-
+SELECT ca.CA, ROUND((
+SELECT SUM(pa.Padron) / COUNT(*)
+FROM Municipios as m
+	INNER JOIN Provincias as p
+	on m.CodProvincia = p.CodProvincia
+	INNER JOIN Padron as pa
+	ON m.CodMunicipio = pa.CodMunicipio
+	WHERE p.CodCA = ca.CodCA
+), 2) AS Total
+FROM ComunidadesAutonomas AS ca
+ORDER BY Total asc;
+go
 
 --11.- (SUBCONSULTAS)Diferencia por Comunidad Autónoma entre el nº de parados en marzo de 2013 y
 --en enero de 2013
-
+SELECT ca.CA, 
+(SELECT SUM(pm.TotalParoRegistrado)
+FROM ParoMes AS pm
+INNER JOIN Municipios as m on m.CodMunicipio = pm.CodMunicipio
+INNER JOIN Provincias as p on m.CodProvincia = p.CodProvincia
+WHERE MONTH(pm.Fecha) = 3 AND YEAR(pm.Fecha) = 2013 AND p.CodCA = ca.CodCA
+)-
+(SELECT SUM(pm.TotalParoRegistrado)
+FROM ParoMes AS pm
+INNER JOIN Municipios as m on m.CodMunicipio = pm.CodMunicipio
+INNER JOIN Provincias as p on m.CodProvincia = p.CodProvincia
+WHERE MONTH(pm.Fecha) = 1 AND YEAR(pm.Fecha) = 2013 AND p.CodCA = ca.CodCA
+)
+FROM ComunidadesAutonomas AS ca;
+go
 
 --12.- (SUBCONSULTAS)Municipio con más habitantes de cada Comunidad Autónoma.
+
+SELECT ca.CA,
+(SELECT TOP 1 m.Municipio
+	FROM Municipios AS m
+	INNER JOIN Padron as pa
+	ON m.CodMunicipio = pa.CodMunicipio
+	INNER JOIN Provincias as p
+	ON m.CodProvincia = p.CodProvincia
+	WHERE ca.CodCA = p.CodCA
+	ORDER BY pa.Padron DESC) 'Municipio con mas habitantes'
+FROM ComunidadesAutonomas AS ca;
+go
+
