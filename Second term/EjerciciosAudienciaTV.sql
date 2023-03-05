@@ -12,16 +12,26 @@ INNER JOIN Audiencia AS a
 ON c.idCadena = a.IdCadena
 INNER JOIN Periodo AS p
 ON a.idPeriodo = p.Id
-WHERE CAST(ap.FechaHora AS DATE) = '2013-5-15' AND p.Periodo LIKE 'Noche1%'
+WHERE a.Fecha = '15-5-2013' AND p.Periodo LIKE 'Noche1%'
 ORDER BY a.Valor DESC;
 
 --2.- Programa de TELECINCO con más espectadores los jueves (en audienciaprograma)
 
+SELECT TOP 1 WITH TIES pro.Programa, ap.Espectadores
+FROM AudienciaPrograma AS ap
+	INNER JOIN Cadena AS c
+	ON ap.IdCadena = c.idCadena
+	INNER JOIN Programa AS pro
+	ON ap.IdPrograma = pro.IdPrograma
+	WHERE c.Cadena = 'Telecinco' AND DATEPART(WEEKDAY, ap.FechaHora) = 4
+ORDER BY Espectadores DESC;
+go
 
 
 --(*) 3.- ¿Cuántos programas tiene telecinco entre los cinco primeros del día 8/5/2013 teniendo en
 --cuenta el share (en audienciaprograma)?
 
+SELECT COUNT(*), 
 
 
 --4.- ¿Qué día de la semana tiene más espectadores considerando los datos de AudienciaPrograma?
