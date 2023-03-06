@@ -31,7 +31,23 @@ go
 --(*) 3.- ¿Cuántos programas tiene telecinco entre los cinco primeros del día 8/5/2013 teniendo en
 --cuenta el share (en audienciaprograma)?
 
-SELECT COUNT(*), 
+SELECT c.Cadena
+FROM Programa AS p
+INNER JOIN AudienciaPrograma AS ap
+ON p.IdPrograma = ap.IdPrograma
+INNER JOIN Cadena AS c
+ON ap.IdCadena = c.idCadena
+WHERE CAST(ap.FechaHora AS DATE) = '8/5/2013'
+
+SELECT TOP 5 WITH TIES Programa
+FROM Programa AS pro
+INNER JOIN  AudienciaPrograma AS ap
+ON pro.IdPrograma = ap.IdPrograma
+INNER JOIN Cadena AS c
+ON ap.IdCadena = c.idCadena
+ORDER BY ap.Share
+
+
 
 
 --4.- ¿Qué día de la semana tiene más espectadores considerando los datos de AudienciaPrograma?
