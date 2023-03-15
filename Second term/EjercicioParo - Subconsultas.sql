@@ -35,7 +35,7 @@ ORDER BY Padron desc;
 go
 --4.- Qué Comunidad Autónoma tiene mayor diferencia entre el paro mujeres en la edad
 --25-45 y la de mujeres menores de 25, en enero de 2013.
-SELECT ca.CA, SUM(ParoMujerEdad25_45),SUM(ParoMujerEdadMenor25), SUM(ParoMujerEdad25_45) - SUM(ParoMujerEdadMenor25) AS DiffParo
+SELECT TOP 1 ca.CA, SUM(ParoMujerEdad25_45) AS ParoMujerEntre25y45,SUM(ParoMujerEdadMenor25) AS ParoMujerMenor25, SUM(ParoMujerEdad25_45)  - SUM(ParoMujerEdadMenor25) AS DiffParo
 FROM ComunidadesAutonomas AS ca
 	INNER JOIN Provincias AS p
 	ON ca.CodCA = p.CodCA
@@ -46,7 +46,6 @@ FROM ComunidadesAutonomas AS ca
 WHERE MONTH(Fecha) = 1
 GROUP BY CA
 ORDER BY DiffParo DESC;
-
 go
 --5.- Comunidades autónomas sin islas
 SELECT ca.CA
@@ -61,14 +60,11 @@ WHERE CISLA IS NULL
 GROUP BY CA
 go
 
-SELECT CISLA
-FROM MunicipiosIslas;
-
 --6.- Crear una vista que muestre el nombre de la comunidad autónoma, el de la
 --provincia y el del municipio, junto al total de paro registrado a fecha 1/3/2013 y al
 --padrón. Usar esta vista para mostrar la división entre paro registrado y padrón para
 --todas las Comunidades autónomas.
-CREATE VIEW Vista AS
+--CREATE VIEW Vista AS
 SELECT ca.CA, p.Provincia, m.Municipio, SUM(pm.TotalParoRegistrado) AS TotalParoRegistrado, SUM(pa.Padron) AS PadronTotal
 	FROM ComunidadesAutonomas AS ca
 	INNER JOIN Provincias AS p
@@ -89,7 +85,7 @@ GROUP BY Vista.CA
 ORDER BY DivisionParoPorPadron DESC
 go
 --7.- (SUBCONSULTAS)Dar los nombres de los municipios de la Comunidad autónoma con mayor paro en
---agricultura (en febrero de 2013).!!!!!!!!
+--agricultura (en febrero de 2013).
 SELECT m.municipio
 FROM   municipios AS m
        INNER JOIN provincias AS p
@@ -123,67 +119,109 @@ go
 
 --9.- (SUBCONSULTAS)Municipios con más parados en Servicios entre los habitantes del padrón en
 --febrero de 2013 que la media nacional de la misma división
-SELECT m.Municipio, pa.Padron,(SELECT pm.ParoServicios
-	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013 AND pm.CodMunicipio = m.CodMunicipio) AS ParoServicio,
-	(SELECT pm.ParoServicios
-	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2 AND YEAR(pm.Fecha) = 2013 AND pm.CodMunicipio = m.CodMunicipio) / pa.Padron
 
-FROM Municipios AS m
-	INNER JOIN Padron AS pa
-	ON m.CodMunicipio = pa.CodMunicipio
-	WHERE (SELECT pm.ParoServicios
-	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2 AND pm.CodMunicipio = m.CodMunicipio) > AVG((SELECT pm.ParoServicios
-	FROM ParoMes AS pm
-	WHERE MONTH(pm.Fecha) = 2AND pm.CodMunicipio = m.CodMunicipio))
+SELECT m.municipio,
+       pm.paroservicios
+FROM   municipios AS m
+       INNER JOIN paromes AS pm
+               ON m.codmunicipio = pm.codmunicipio
+WHERE  Month(pm.fecha) = 2
+       AND Year(pm.fecha) = 2013
+       AND pm.paroservicios > (SELECT Avg(pm.paroservicios) AS MediaTotal
+                               FROM   municipios AS m
+                                      INNER JOIN paromes AS pm
+                                              ON m.codmunicipio =
+                                                 pm.codmunicipio)
+ORDER  BY paroservicios DESC;
+go 
 
 	
 --10.- Indicar para cada Comunidad Autónoma el nº de habitantes por municipio
 --(padrón dividido entre número de municipios), ordenándolas de menor a mayor
-SELECT ca.CA, ROUND((
-SELECT SUM(pa.Padron) / COUNT(*)
-FROM Municipios as m
-	INNER JOIN Provincias as p
-	on m.CodProvincia = p.CodProvincia
-	INNER JOIN Padron as pa
-	ON m.CodMunicipio = pa.CodMunicipio
-	WHERE p.CodCA = ca.CodCA
-), 2) AS Total
-FROM ComunidadesAutonomas AS ca
-ORDER BY Total asc;
-go
+SELECT ca.ca,
+       Round((SELECT Sum(pa.padron) / Count(*)
+              FROM   municipios AS m
+                     INNER JOIN provincias AS p
+                             ON m.codprovincia = p.codprovincia
+                     INNER JOIN padron AS pa
+                             ON m.codmunicipio = pa.codmunicipio
+              WHERE  p.codca = ca.codca), 2) AS Total
+FROM   comunidadesautonomas AS ca
+ORDER  BY total ASC;
+go 
 
 --11.- (SUBCONSULTAS)Diferencia por Comunidad Autónoma entre el nº de parados en marzo de 2013 y
 --en enero de 2013
-SELECT ca.CA, 
+SELECT ca.ca,
+       (SELECT Sum(pm.totalparoregistrado)
+        FROM   paromes AS pm
+               INNER JOIN municipios AS m
+                       ON m.codmunicipio = pm.codmunicipio
+               INNER JOIN provincias AS p
+                       ON m.codprovincia = p.codprovincia
+        WHERE  Month(pm.fecha) = 3
+               AND Year(pm.fecha) = 2013
+               AND p.codca = ca.codca) - 
+		(SELECT Sum(pm.totalparoregistrado)
+		FROM   paromes AS pm
+                INNER JOIN municipios AS m
+                        ON m.codmunicipio = pm.codmunicipio
+                INNER JOIN provincias AS p
+                        ON m.codprovincia = p.codprovincia
+        WHERE  Month(pm.fecha) = 1
+                AND Year(pm.fecha) = 2013
+                AND p.codca = ca.codca) AS
+       DiferenciaParoEntreEneroMarzo
+FROM   comunidadesautonomas AS ca;
+go 
+
+
+SELECT  ca.CA,
 (SELECT SUM(pm.TotalParoRegistrado)
-FROM ParoMes AS pm
-INNER JOIN Municipios as m on m.CodMunicipio = pm.CodMunicipio
-INNER JOIN Provincias as p on m.CodProvincia = p.CodProvincia
-WHERE MONTH(pm.Fecha) = 3 AND YEAR(pm.Fecha) = 2013 AND p.CodCA = ca.CodCA
-)-
+FROM Municipios AS m
+	INNER JOIN Provincias AS p
+	ON m.CodProvincia = p.CodProvincia
+	INNER JOIN ParoMes AS pm
+	ON m.CodMunicipio = pm.CodMunicipio
+WHERE ca.CodCA = p.CodCA AND MONTH(pm.Fecha) = 3) AS ParoMarzo,
 (SELECT SUM(pm.TotalParoRegistrado)
-FROM ParoMes AS pm
-INNER JOIN Municipios as m on m.CodMunicipio = pm.CodMunicipio
-INNER JOIN Provincias as p on m.CodProvincia = p.CodProvincia
-WHERE MONTH(pm.Fecha) = 1 AND YEAR(pm.Fecha) = 2013 AND p.CodCA = ca.CodCA
-)
-FROM ComunidadesAutonomas AS ca;
-go
+FROM Municipios AS m
+	INNER JOIN Provincias AS p
+	ON m.CodProvincia = p.CodProvincia
+	INNER JOIN ParoMes AS pm
+	ON m.CodMunicipio = pm.CodMunicipio
+WHERE ca.CodCA = p.CodCA AND MONTH(pm.Fecha) = 1) AS ParoEnero,
+(SELECT SUM(pm.TotalParoRegistrado)
+FROM Municipios AS m
+	INNER JOIN Provincias AS p
+	ON m.CodProvincia = p.CodProvincia
+	INNER JOIN ParoMes AS pm
+	ON m.CodMunicipio = pm.CodMunicipio
+WHERE ca.CodCA = p.CodCA AND MONTH(pm.Fecha) = 3) -
+(SELECT SUM(pm.TotalParoRegistrado)
+FROM Municipios AS m
+	INNER JOIN Provincias AS p
+	ON m.CodProvincia = p.CodProvincia
+	INNER JOIN ParoMes AS pm
+	ON m.CodMunicipio = pm.CodMunicipio
+WHERE ca.CodCA = p.CodCA AND MONTH(pm.Fecha) = 1) AS Diferencia
+FROM ComunidadesAutonomas AS ca
+
+
+
+
 
 --12.- (SUBCONSULTAS)Municipio con más habitantes de cada Comunidad Autónoma.
 
-SELECT ca.CA,
-(SELECT TOP 1 m.Municipio
-	FROM Municipios AS m
-	INNER JOIN Padron as pa
-	ON m.CodMunicipio = pa.CodMunicipio
-	INNER JOIN Provincias as p
-	ON m.CodProvincia = p.CodProvincia
-	WHERE ca.CodCA = p.CodCA
-	ORDER BY pa.Padron DESC) 'Municipio con mas habitantes'
-FROM ComunidadesAutonomas AS ca;
-go
+SELECT ca.ca,
+       (SELECT TOP 1 m.municipio
+        FROM   municipios AS m
+               INNER JOIN padron AS pa
+                       ON m.codmunicipio = pa.codmunicipio
+               INNER JOIN provincias AS p
+                       ON m.codprovincia = p.codprovincia
+        WHERE  ca.codca = p.codca
+        ORDER  BY pa.padron DESC) 'Municipio con mas habitantes'
+FROM   comunidadesautonomas AS ca;
+go 
 
