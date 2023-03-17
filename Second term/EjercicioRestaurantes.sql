@@ -125,14 +125,100 @@ go
 
 --6. Dar los tipos de platos servidos de la comida más cara.
 
+SELECT plato
+FROM   plato AS p
+       INNER JOIN detallecomida AS detcom
+               ON p.codplato = detcom.codplato
+WHERE  detcom.idcomida = (SELECT TOP 1 c.idcomida
+                          FROM   comida AS c
+                                 INNER JOIN detallecomida AS dc
+                                         ON c.idcomida = dc.idcomida
+                          GROUP  BY c.idcomida
+                          ORDER  BY Sum(dc.precioplato) DESC);
+
+go 
 
 --7. Dar las comidas pendientes de pagar (dando mesa y fecha) con todos sus platos servidos.
 
+SELECT c.Fecha, c.CodMesa, p.Plato
+FROM Plato AS p
+	INNER JOIN DetalleComida AS dc
+	ON p.CodPlato = dc.CodPlato
+	INNER JOIN Comida AS c
+	ON dc.IdComida = c.IdComida
+WHERE c.Pagado = 'N' AND Servido = 'S'
 
+SELECT c.Pagado
+FROM Comida AS c
+--
+
+SELECT comida.idcomida,
+       mesa.codmesa,
+       fecha,
+       (SELECT Count(*)
+        FROM   plato
+               INNER JOIN detallecomida
+                       ON detallecomida.codplato = plato.codplato
+        WHERE  servido = 'S'
+               AND detallecomida.idcomida = comida.idcomida) AS PlatosServidos
+FROM   mesa
+       INNER JOIN comida
+               ON comida.codmesa = mesa.codmesa
+WHERE  pagado = 'N'; 
 --8. Comidas (dando mesa y fecha) que sólo han consumido bebidas
+
+SELECT c.fecha,
+       c.codmesa
+FROM   comida AS c
+WHERE  c.idcomida IN (SELECT c.idcomida
+                      FROM   comida AS c
+                             INNER JOIN detallecomida AS dc
+                                     ON c.idcomida = dc.idcomida
+                             INNER JOIN plato AS p
+                                     ON dc.codplato = p.codplato
+                             INNER JOIN tipoplato AS tp
+                                     ON p.codtipoplato = tp.codtipoplato
+                      WHERE  agrupa = 'Bebida'); 
 
 
 --9. Mostrar los platos de las Comidas que han servido más de 5 bebidas.
 
+SELECT DISTINCT p.plato
+FROM   plato AS p
+       INNER JOIN detallecomida AS dc
+               ON p.codplato = dc.codplato
+WHERE  dc.idcomida IN (SELECT dc.idcomida
+                       FROM   detallecomida AS dc
+                              INNER JOIN plato AS p
+                                      ON dc.codplato = p.codplato
+                              INNER JOIN tipoplato AS tp
+                                      ON p.codtipoplato = tp.codtipoplato
+                       WHERE  agrupa = 'Bebida'
+                              AND servido = 'S'
+                       GROUP  BY dc.idcomida
+                       HAVING Count(*) > 5); 
+
 
 --10. Comidas (dando mesa y fecha) que han servido más bebidas que platos.
+
+SELECT c.fecha,
+       c.codmesa
+FROM   comida AS c
+       INNER JOIN detallecomida AS dc
+               ON c.idcomida = dc.idcomida
+WHERE  (SELECT Count(*)
+        FROM   plato AS p
+               INNER JOIN tipoplato AS tp
+                       ON p.codtipoplato = tp.codtipoplato
+               INNER JOIN detallecomida AS dc
+                       ON p.codplato = dc.codplato
+        WHERE  agrupa = 'Bebida'
+               AND dc.idcomida = c.idcomida) > 
+		(SELECT Count(*)
+         FROM   plato AS p
+               INNER JOIN tipoplato AS tp
+					   ON p.codtipoplato = tp.codtipoplato
+			   INNER JOIN detallecomida AS dc
+					   ON p.codplato = dc.codplato
+		WHERE  agrupa = 'Plato' AND dc.idcomida = c.idcomida) 
+	
