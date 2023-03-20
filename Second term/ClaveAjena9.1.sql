@@ -32,6 +32,10 @@ go
 INSERT INTO ALQ_Alquiler (DNICliente, Matricula, FechaInicio)
 	values ('123456789','2354-HBC', GETDATE()); 
 
+--7
+
+sp_HelpConstraint ALQ_Alquiler;
+
 --6.- Realizar un alquiler correcto. 
 INSERT INTO ALQ_Alquiler (DNICliente, Matricula, FechaInicio)
 	values ('05679340L','2354-HBC', GETDATE()); 
@@ -126,4 +130,11 @@ where Matricula = '1234-ABC';
 --19.- Cómo modificaríamos la creación de las tablas para colocarle las foreign key y evitar que puedan colocarse
 -- valores null en los campos correspondientes a las mismas. Crear de nuevo la BD con ese cambio. 
 
+drop database AlquilerCochesSinFK;
+go
+
 --20.- Probar una inserción de un coche con tipocoche a null.
+
+INSERT INTO ALQ_Coche(Matricula, DescripcionEstado, codTipo)
+	VALUES(null, 'Bonito', 1);
+go
