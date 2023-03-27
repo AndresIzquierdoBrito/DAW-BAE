@@ -1,11 +1,26 @@
-create database AdministracionSQL;
+--1. Crear la Base de datos en la carpeta SQLDatos con tamaño inicial 5M, tamaño mayor
+--20 M e incrementos 4M.
+IF db_id('AdministracionSQL') IS NOT NULL
+	DROP DATABASE AdministracionSQL;
 go
+-- Recuerda darle permisos a la carpeta con chmod
+CREATE DATABASE AdministracionSQL
+ON 
+( NAME = AdministracionSQL_dat,
+  FILENAME = '/SQLDatos/AdministracionSQL.mdf',
+  SIZE = 5MB,
+  MAXSIZE = 20MB,
+  FILEGROWTH = 4MB)
+LOG ON
+( NAME = AdministracionSQL_LOG,
+  FILENAME = '/SQLDatos/AdministracionSQL_log.ldf',
+  SIZE = 5MB,
+  MAXSIZE = 25MB,
+  FILEGROWTH = 5MB);
 
 use AdministracionSQL;
 go
-
--- ///////////////////////////////
-
+--2. Crear una tabla con la estructura siguiente:
 create table empleados (
 DNI varchar(8),
 nombre varchar(30),
@@ -18,7 +33,7 @@ sueldo decimal(6,2)
 
 exec sp_helpconstraint empleados;
 go
-
+--3. Crear las sentencias para que valide lo siguiente:
 -- a. Clave primara DNI
 -- Pimera manera
 create table empleados (
@@ -30,11 +45,6 @@ create table empleados (
 DNI varchar(8),
 constraint pk_empleados primary key(dni)
 );
-
--- Tercera manera
-alter table empleados
-alter column DNI varchar(8) NOT NULL;
-go
 
 alter table empleados
 add constraint pk_empleados
@@ -128,7 +138,7 @@ constraint ck_canthijos
 
 alter table empleados
 add constraint ck_canthijos
-	check(cantidadhijos < 20 AND cantidadhijos > 0;
+	check(cantidadhijos < 20 AND cantidadhijos > 0);
 
 --g. validar que sección no esté vacío
 -- Primera manera
@@ -162,3 +172,34 @@ insert into empleados(DNI, nombre, apellidos)
 values ('12345678', 'Pepe', 'Pepon');
 go
 
+--4. Ver los índices que tiene.
+
+exec sp_helpindex empleados;
+go
+
+--5. Añadir índice por fecha de nacimiento
+create nonclustered index ix_fechanacimiento
+on empleados(fechanacimiento);
+go
+
+--6. Añadir índice por sueldo
+create nonclustered index ix_sueldo
+on empleados(sueldo)
+go
+
+--7. Modificar lo siguiente en la tabla
+--a. Añadir campo dirección varchar(100)
+alter table empleados
+add direccion varchar(100);
+go
+
+--b. Cambiar a no nulo seccion
+alter table empleados
+alter column seccion varchar(20) NOT NULL;
+go
+
+--c. Validar que sueldo sean >0 y <10000
+alter table empleados
+add constraint CK_Sueldobwt
+	check(seccion BETWEEN 0 AND 10000);
+go
