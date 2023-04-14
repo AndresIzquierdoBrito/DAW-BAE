@@ -90,16 +90,82 @@ go
 
 --12. Intentar una inserción
 
+INSERT INTO ver_CA
+values(123, 'Barpelona')
+go
+
+select * FROM ver_CA
+go
 --13. Crear una vista que acceda a las Comunidades autónomas solamente
+
+CREATE VIEW solo_CA
+AS
+SELECT CA
+FROM ComunidadesAutonomas;
+go
+
+select * FROM solo_CA;
+go
 
 --14. Hacer una inserción correcta sobre esa vista
 
+ALTER VIEW solo_CA
+AS
+SELECT CodCA, CA
+FROM ComunidadesAutonomas
+go
+
+INSERT INTO solo_CA
+VALUES(45, 'Español');
+go
+
 --15. Borrar el registro creado anteriormente, usando también la vista
+
+DELETE FROM solo_CA
+WHERE CA = 'Español';
+go
 
 --16. Crear una vista que muestre sólo las Comunidades autónomas que comiencen con C y
 --con la opción with check option
 
+CREATE VIEW VIEW_CA_con_C
+AS
+SELECT ca.CA
+FROM ComunidadesAutonomas AS ca
+	INNER JOIN Provincias AS p
+	on ca.CodCA = p.CodCA
+	INNER JOIN Municipios AS m
+	on p.CodProvincia = m.CodProvincia
+	INNER JOIN Paromes AS pm
+	on m.CodMunicipio = pm.CodMunicipio
+GROUP BY ca.CA
+HAVING ca.CA LIKE 'C%'
+WITH CHECK OPTION;
+go
+
 --17. Probar inserciones y modificaciones que validen el funcionamiento de la opción
 --aplicada
 
+INSERT INTO VIEW_CA_con_C
+VALUES ('CATALAN')
+go
+
+UPDATE VIEW_CA_con_C
+SET CA = 'holita'
+WHERE CA LIKE 'C%'
+go
 --18. Modificar la vista anterior filtrando a comunidades autónomas que comiencen por A
+
+ALTER VIEW VIEW_CA_con_C
+AS
+SELECT ca.CA
+FROM ComunidadesAutonomas AS ca
+	INNER JOIN Provincias AS p
+	on ca.CodCA = p.CodCA
+	INNER JOIN Municipios AS m
+	on p.CodProvincia = m.CodProvincia
+	INNER JOIN Paromes AS pm
+	on m.CodMunicipio = pm.CodMunicipio
+GROUP BY ca.CA
+HAVING ca.CA LIKE 'A%'
+go
